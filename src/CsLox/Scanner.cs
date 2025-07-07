@@ -2,8 +2,7 @@ namespace CsLox
 {
     public class Scanner
     {
-        private const string _regex = "[a-zA-Z_][a-zA-Z_0-9]*";
-
+        private readony Dictionary<> _myVar;
         private readonly string _source;
         private readonly List<Token> _tokens = [];
 
@@ -73,10 +72,92 @@ namespace CsLox
                     break;
 
                 case '"': LoxString(); break;
+                // case 'o':
+                //     if (Match('r'))
+                //         AddToken(TokenType.OR);
+                //     break;
                 default:
-                    Program.Error(_line, "Unexpected character.");
+                    if (IsValidLuxDigit(c))
+                        LoxNumber();
+                    else if (IsAlpha(c))
+                        Identifier();
+                    else
+                        Program.Error(_line, "Unexpected character.");
                     break;
             }
+        }
+
+        private void Identifier()
+        {
+            while (IsAlphaNumeric(Peek()))
+            {
+                Advance();
+            }
+            AddToken(TokenType.IDENTIFIER);
+        }
+
+        private static bool IsAlpha(char c)
+        {
+            return (c >= 'a' && c <= 'z')
+                || (c >= 'A' && c <= 'Z')
+                || c == '_';
+        }
+
+        private static bool IsAlphaNumeric(char c)
+        {
+            return IsAlpha(c) || IsValidLuxDigit(c);
+        }
+
+        private void LoxString()
+        {
+            while (Peek() != '"' && !IsAtEnd())
+            {
+                if (Peek() == '\n') _line++;
+                Advance();
+            }
+
+            if (IsAtEnd())
+            {
+                Program.Error(_line, "Unterminated string.");
+                return;
+            }
+
+            // The closing "
+            Advance();
+
+            // trim the surrounding quotes
+            string value = _source.Substring(_start + 1, _current - 1);
+            AddToken(TokenType.STRING, value);
+        }
+
+        private void LoxNumber()
+        {
+            while (IsValidLuxDigit(Peek()))
+            {
+                Advance();
+            }
+            // Look for a fractional part.
+            if (Peek() == '.' && IsValidLuxDigit(PeekNext()))
+            {
+                // consume the '.'
+                Advance();
+                while (IsValidLuxDigit(Peek()))
+                {
+                    Advance();
+                }
+            }
+            AddToken(TokenType.NUMBER, double.Parse(_source.Substring(_start, _current)));
+        }
+
+        private char PeekNext()
+        {
+            if (_current + 1 >= _source.Length) return '\0';
+            return _source[_current + 1];
+        }
+
+        private static bool IsValidLuxDigit(char c)
+        {
+            return c >= '0' && c <= '9';
         }
 
         private char Advance()
